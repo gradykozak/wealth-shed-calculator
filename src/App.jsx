@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 /* ── DESIGN TOKENS ───────────────────────────────────────────────────── */
 const C = {
@@ -18,10 +18,10 @@ const C = {
 };
 
 const TAB_COLORS = {
-  rsu:        { bg: C.pastelBlue,      dot: "#5B9BD5",  label: "RSU Tax Estimator",    icon: "📊" },
-  retirement: { bg: C.pastelYellow,    dot: C.accentGold, label: "Retirement Tracker", icon: "🏦" },
-  "401k":     { bg: C.pastelLavender,  dot: "#7B5EA7",  label: "401(k) Optimizer",     icon: "⚙️" },
-  networth:   { bg: C.pastelPeach,     dot: "#C96B3E",  label: "Net Worth Snapshot",   icon: "💼" },
+  rsu:        { bg: C.pastelBlue,      dot: "#5B9BD5",    label: "RSU Tax Estimator",    icon: "📊" },
+  retirement: { bg: C.pastelYellow,    dot: C.accentGold, label: "Retirement Tracker",   icon: "🏦" },
+  "401k":     { bg: C.pastelLavender,  dot: "#7B5EA7",    label: "401(k) Optimizer",     icon: "⚙️" },
+  networth:   { bg: C.pastelPeach,     dot: "#C96B3E",    label: "Net Worth Snapshot",   icon: "💼" },
 };
 
 const fmt$ = (v) =>
@@ -37,8 +37,7 @@ function Slider({ label, value, onChange, min, max, step = 1, format = String, s
         <span style={{ fontSize: 13, color: C.muted, fontWeight: 500 }}>{label}</span>
         <span style={{
           fontSize: 13, fontFamily: "'Syne Mono', monospace", fontWeight: 700,
-          color: C.accentNavy, background: color + "50", padding: "2px 10px",
-          borderRadius: 99,
+          color: C.accentNavy, background: color + "50", padding: "2px 10px", borderRadius: 99,
         }}>{format(value)}</span>
       </div>
       {sublabel && <div style={{ fontSize: 11, color: C.muted, marginBottom: 5 }}>{sublabel}</div>}
@@ -208,12 +207,7 @@ function NetWorthCalc({ color }) {
             const v = Math.max(0, Number(e.target.value));
             isLiab ? setLiabs(p => ({ ...p, [label]: v })) : setAssets(p => ({ ...p, [label]: v }));
           }}
-          style={{
-            width: "100%", padding: "8px 10px 8px 22px", borderRadius: 10,
-            border: `1.5px solid ${C.border}`, background: C.bg,
-            color: C.text, fontSize: 13, fontFamily: "'Syne Mono', monospace",
-            outline: "none", boxSizing: "border-box",
-          }}
+          style={{ width: "100%", padding: "8px 10px 8px 22px", borderRadius: 10, border: `1.5px solid ${C.border}`, background: C.bg, color: C.text, fontSize: 13, fontFamily: "'Syne Mono', monospace", outline: "none", boxSizing: "border-box" }}
         />
       </div>
     </div>
@@ -222,7 +216,7 @@ function NetWorthCalc({ color }) {
   return (
     <div>
       <p style={{ color: C.muted, fontSize: 13, marginBottom: 20, lineHeight: 1.7 }}>
-        Get a clear picture of where you stand. All data stays in your browser only — nothing is stored externally.
+        Get a clear picture of where you stand. All data stays in your browser only.
       </p>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
         <div>
@@ -250,6 +244,8 @@ export default function App() {
   const [active, setActive] = useState("rsu");
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const [saveMsg, setSaveMsg] = useState("");
   const tc = TAB_COLORS[active];
 
@@ -257,6 +253,34 @@ export default function App() {
     try { localStorage.setItem("ws_saved", JSON.stringify({ tab: active, date: new Date().toLocaleDateString() })); } catch(e) {}
     setSaveMsg("Saved ✓");
     setTimeout(() => setSaveMsg(""), 2500);
+  };
+
+  const handleSubmit = async () => {
+    if (!email.includes("@")) {
+      setErrorMsg("Please enter a valid email address.");
+      return;
+    }
+    setErrorMsg("");
+    setSubmitting(true);
+    try {
+      const res = await fetch("https://formspree.io/f/xpqyavlb", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({
+          email,
+          source: "WealthShed Calculator Waitlist",
+          date: new Date().toLocaleDateString(),
+        }),
+      });
+      if (res.ok) {
+        setSubmitted(true);
+      } else {
+        setErrorMsg("Something went wrong. Please try again.");
+      }
+    } catch(e) {
+      setErrorMsg("Connection error. Please try again.");
+    }
+    setSubmitting(false);
   };
 
   return (
@@ -273,23 +297,16 @@ export default function App() {
         .cta-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(184,137,58,0.35) !important; }
         .save-btn:hover { background: ${C.border} !important; }
         input[type=number]:focus { border-color: ${C.accentGold}80 !important; }
+        input[type=email]:focus { border-color: ${C.accentGold}80 !important; outline: none; }
       `}</style>
 
       {/* HEADER */}
-      <div style={{
-        background: C.surface, borderBottom: `1px solid ${C.border}`,
-        padding: "16px 32px", display: "flex", alignItems: "center", justifyContent: "space-between",
-        position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 12px rgba(30,45,74,0.05)",
-      }}>
+      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "16px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100, boxShadow: "0 2px 12px rgba(30,45,74,0.05)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, fontWeight: 700, color: C.accentNavy, letterSpacing: "-0.01em" }}>WealthShed</span>
           <span style={{ fontSize: 11, background: C.pastelYellow, color: C.accentGold, padding: "3px 10px", borderRadius: 99, fontWeight: 700, letterSpacing: "0.04em" }}>Planning Tools</span>
         </div>
-        <a href="https://wealthshed.com" target="_blank" rel="noreferrer" style={{
-          fontSize: 12, fontWeight: 600, color: C.accentGold, textDecoration: "none",
-          border: `1.5px solid ${C.accentGold}50`, padding: "7px 18px", borderRadius: 99,
-          background: C.pastelYellow + "80",
-        }}>
+        <a href="https://wealthshed.com" target="_blank" rel="noreferrer" style={{ fontSize: 12, fontWeight: 600, color: C.accentGold, textDecoration: "none", border: `1.5px solid ${C.accentGold}50`, padding: "7px 18px", borderRadius: 99, background: C.pastelYellow + "80" }}>
           wealthshed.com →
         </a>
       </div>
@@ -298,12 +315,7 @@ export default function App() {
 
         {/* HERO */}
         <div style={{ textAlign: "center", marginBottom: 36 }}>
-          <div style={{
-            display: "inline-block", background: tc.bg, color: C.accentNavy,
-            fontSize: 11, fontWeight: 700, padding: "4px 16px", borderRadius: 99,
-            marginBottom: 16, letterSpacing: "0.07em", textTransform: "uppercase",
-            transition: "background 0.4s",
-          }}>
+          <div style={{ display: "inline-block", background: tc.bg, color: C.accentNavy, fontSize: 11, fontWeight: 700, padding: "4px 16px", borderRadius: 99, marginBottom: 16, letterSpacing: "0.07em", textTransform: "uppercase", transition: "background 0.4s" }}>
             Free financial tools
           </div>
           <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 40, fontWeight: 700, color: C.accentNavy, lineHeight: 1.15, marginBottom: 14 }}>
@@ -338,12 +350,7 @@ export default function App() {
         </div>
 
         {/* CALCULATOR CARD */}
-        <div style={{
-          background: C.surface, borderRadius: 24,
-          border: `1.5px solid ${C.border}`,
-          boxShadow: "0 8px 40px rgba(30,45,74,0.07)",
-          overflow: "hidden", marginBottom: 20,
-        }}>
+        <div style={{ background: C.surface, borderRadius: 24, border: `1.5px solid ${C.border}`, boxShadow: "0 8px 40px rgba(30,45,74,0.07)", overflow: "hidden", marginBottom: 20 }}>
           <div style={{ height: 5, background: `linear-gradient(90deg, ${tc.dot}, ${tc.dot}70)`, transition: "background 0.4s" }} />
           <div style={{ padding: "28px 32px 32px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
@@ -356,11 +363,7 @@ export default function App() {
                   <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>Adjust sliders to explore scenarios</div>
                 </div>
               </div>
-              <button className="save-btn" onClick={handleSave} style={{
-                padding: "7px 16px", borderRadius: 10, border: `1.5px solid ${C.border}`,
-                background: "transparent", color: C.muted, fontSize: 12, cursor: "pointer",
-                fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 500,
-              }}>
+              <button className="save-btn" onClick={handleSave} style={{ padding: "7px 16px", borderRadius: 10, border: `1.5px solid ${C.border}`, background: "transparent", color: C.muted, fontSize: 12, cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 500 }}>
                 {saveMsg || "💾 Save"}
               </button>
             </div>
@@ -393,22 +396,23 @@ export default function App() {
                   </p>
                 </div>
                 <div style={{ flex: 1, minWidth: 240 }}>
-                  <input type="email" placeholder="your@email.com" value={email} onChange={e => setEmail(e.target.value)}
-                    style={{
-                      width: "100%", padding: "13px 16px", borderRadius: 12, marginBottom: 10,
-                      border: `1.5px solid ${C.accentGold}40`, background: "rgba(255,255,255,0.85)",
-                      color: C.text, fontSize: 14, fontFamily: "'Plus Jakarta Sans', sans-serif",
-                      outline: "none", display: "block",
-                    }}
+                  <input
+                    type="email"
+                    placeholder="your@email.com"
+                    value={email}
+                    onChange={e => { setEmail(e.target.value); setErrorMsg(""); }}
+                    onKeyDown={e => e.key === "Enter" && handleSubmit()}
+                    style={{ width: "100%", padding: "13px 16px", borderRadius: 12, marginBottom: 10, border: `1.5px solid ${errorMsg ? C.danger : C.accentGold + "40"}`, background: "rgba(255,255,255,0.85)", color: C.text, fontSize: 14, fontFamily: "'Plus Jakarta Sans', sans-serif", outline: "none", display: "block", boxSizing: "border-box" }}
                   />
-                  <button className="cta-btn" onClick={() => { if (email.includes("@")) setSubmitted(true); }} style={{
-                    width: "100%", padding: "13px 24px", borderRadius: 12, border: "none",
-                    background: C.accentGold, color: "white",
-                    fontWeight: 700, fontSize: 14, cursor: "pointer",
-                    fontFamily: "'Plus Jakarta Sans', sans-serif",
-                    boxShadow: "0 4px 16px rgba(184,137,58,0.30)",
-                  }}>
-                    Join the Waitlist →
+                  {errorMsg && (
+                    <div style={{ fontSize: 11, color: C.danger, marginBottom: 8, marginTop: -6 }}>{errorMsg}</div>
+                  )}
+                  <button
+                    className="cta-btn"
+                    onClick={handleSubmit}
+                    disabled={submitting}
+                    style={{ width: "100%", padding: "13px 24px", borderRadius: 12, border: "none", background: submitting ? C.accentWarm : C.accentGold, color: "white", fontWeight: 700, fontSize: 14, cursor: submitting ? "not-allowed" : "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", boxShadow: "0 4px 16px rgba(184,137,58,0.30)", transition: "all 0.2s" }}>
+                    {submitting ? "Submitting..." : "Join the Waitlist →"}
                   </button>
                   <div style={{ fontSize: 11, color: "#4A5A6B", marginTop: 10, textAlign: "center", lineHeight: 1.5 }}>
                     No spam. A fiduciary advisor will reach out personally.
@@ -428,6 +432,7 @@ export default function App() {
             <a href="https://wealthshed.com/disclosures" target="_blank" rel="noreferrer" style={{ fontSize: 11, color: C.muted, textDecoration: "none" }}>View disclosures →</a>
           </div>
         </div>
+
       </div>
     </div>
   );
